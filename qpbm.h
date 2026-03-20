@@ -63,8 +63,10 @@ typedef struct qpbm{
 // @param max_color uint16_t    maximum value for pixels (ignored if pbm)
 // @param type      qpbm_type_n netpbm type (pbm,pgm,ppm)
 // @param format    qpbm_fmt_n  file format (ascii/binary)
-// @error will error if null pointer is passed
-// @return errcode int
+// @error will error if #fp is a null pointer 
+// @error will error if #pixels is a null pointer
+// @error will error if file type is not some supported netpbm
+// @return errc int
 int qpbm_write(FILE* fp, uint8_t* pixels, uint32_t  width, uint32_t  height, uint16_t max_value,  qpbm_type_n type,qpbm_fmt_n format);
 // @desc  read pixel data and image metadata from file
 // @param fp        FILE*           file handle to load
@@ -77,19 +79,21 @@ int qpbm_write(FILE* fp, uint8_t* pixels, uint32_t  width, uint32_t  height, uin
 // @error will error if #fp is a null pointer 
 // @error will error if file type is not some supported netpbm
 // @error will error if file type is not the specified, (except if type is QPBM_PNM)
-// @return errcode int
+// @error will error if can't allocate required resources
+// @error will error if file have bad formating
+// @return errc int
 int qpbm_read(FILE* fp, uint8_t** pixels, uint32_t* width, uint32_t* height, uint16_t* max_value, qpbm_type_n* type, qpbm_fmt_n* format);
 
 // @desc  save qpbm image
 // @param fp    FILE*   file handle to save
 // @param pnm   qpbm_t  qpbm image
-// @return errcode int
+// @return errc int
 int qpbm_save(FILE* fp, qpbm_t  img);
 // @desc  load data and image metadata from file to qpbm image
 // @param fp    FILE*       file handle to load
 // @param pnm   qpbm_t*     qpbm image
 // @param type  qpbm_type_n file format (pbm,pgm,ppm, ascci/binary) (use QPBM_ANY for no type checking)
-// @return errcode int
+// @return errc int
 int qpbm_load(FILE* fp, qpbm_t* img, qpbm_type_n type);
 // @desc create a qpbm image from raw pixels and meta data
 // @param pixels    uint8_t*    pixel data
@@ -145,7 +149,6 @@ int qpbm_write(FILE* fp, uint8_t* pixels, uint32_t width, uint32_t height,uint16
         case QPBM_PGM: fity = format == QPBM_ASCII ? QPBM_FT_PGMA : QPBM_FT_PGMB; break;
         case QPBM_PPM: fity = format == QPBM_ASCII ? QPBM_FT_PPMA : QPBM_FT_PPMB; break;
         default: return QPBM_ERR_UNKNOWN;
-      break;
     }
 
     // header
@@ -248,15 +251,14 @@ int qpbm_read(FILE* fp, uint8_t** pixels, uint32_t* width, uint32_t* height, uin
     int e = 0;
 
     // header
-    int c1 = fgetc(fp);
-    int c2 = fgetc(fp);
-    if(c1 != 'P') return QPBM_ERR_NOT_PBM;
-    if(c2 < QPBM_FT_PBMA || c2 > QPBM_FT_PPMB) return QPBM_ERR_INVALID_TYPE;
+    if(fgetc(fp) != 'P') return QPBM_ERR_NOT_PBM;
 
-    fity = (qpbm_filetype_n)c2;
+    int c = fgetc(fp);
+    if(c < QPBM_FT_PBMA || c > QPBM_FT_PPMB) return QPBM_ERR_INVALID_TYPE;
+    fity  = (qpbm_filetype_n)c;
 
-    ffmt = fity >= QPBM_FT_PBMB ? QPBM_BINARY : QPBM_ASCII;
-    ftype = (qpbm_type_n)(((c2 - '1') % 3) + 1);
+    ffmt  = fity >= QPBM_FT_PBMB ? QPBM_BINARY : QPBM_ASCII;
+    ftype = (qpbm_type_n)(((c - '1') % 3) + 1);
 
     if(type && (*type != QPBM_PNM) && *type != ftype) return QPBM_ERR_WRONG_TYPE;
     
@@ -457,7 +459,7 @@ int qpbm_load(FILE* fp, qpbm_t* img, qpbm_type_n type){
 }
 
 qpbm_t qpbm_from(uint8_t* pixels, uint32_t width, uint32_t height, uint16_t max_value, qpbm_type_n type, qpbm_fmt_n format){
-    return (qpbm_t){.pixels = pixels, .width = width, .height = height, .max_value = max_value, .type = type, .format = format};
+    return (qpbm_t){.type = type, .format = format, .width = width, .height = height, .max_value = max_value, .pixels = pixels};
 }
 
 void qpbm_free(qpbm_t* img){
