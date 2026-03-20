@@ -113,7 +113,7 @@ int qpbm_stride(qpbm_t* img);
 
 // ----------------------------------------------------------------------------|
 
-#ifdef QPBM_IMPL
+#if defined QPBM_IMPL || defined QPBM_IMPLEMENTATION
 
 #include <stdlib.h>
 #include <ctype.h>
