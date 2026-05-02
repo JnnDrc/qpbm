@@ -32,10 +32,10 @@ typedef enum qpbm_filetype{
 }qpbm_filetype_n;
 
 typedef enum qpbm_type{
-    QPBM_PNM,               // Any file type (used only for read/load)
-    QPBM_PBM,               // PBM file type
-    QPBM_PGM,               // PGM file type
-    QPBM_PPM,               // PPM file type
+    QPBM_PNM = 0,           // Any file type (used only for read/load)
+    QPBM_PBM = 1,           // PBM file type
+    QPBM_PGM = 2,           // PGM file type
+    QPBM_PPM = 3,           // PPM file type
 }qpbm_type_n;
 
 typedef enum qpbm_fmt{
@@ -112,6 +112,11 @@ void qpbm_free(qpbm_t* img);
 // @param img qpbm_t qpbm image
 // @return stride int
 int qpbm_stride(qpbm_t* img);
+
+// @desc get string representation of #err
+// @param err qpbm_err_n error
+// @return error const char*
+const char* qpbm_err(qpbm_err_n err);
 
 #endif /* QPBM_H */
 
@@ -421,7 +426,8 @@ int qpbm_read(FILE* fp, uint8_t** pixels, uint32_t* width, uint32_t* height, uin
                         dat16[i*4+3] = 0xFFFF;  // padded max alpha to facilitate use with graphical libraries
                     }else{
                         uint8_t rgb[3] = {0,0,0};
-                        if(fread(rgb,1,3,fp) != 3){
+                        int r = 0;
+                        if(( r = fread(rgb,1,3,fp)) != 3){
                             e = QPBM_ERR_PARSE_ERROR; // NOTE: Handle this later
                             goto err;
                         }
@@ -454,6 +460,8 @@ int qpbm_save(FILE* fp, qpbm_t  img){
 }
 
 int qpbm_load(FILE* fp, qpbm_t* img, qpbm_type_n type){
+    img->pixels = NULL;
+    img->width  = img->height = img->max_value = img->format = 0;
     img->type = type;
     return qpbm_read(fp,&img->pixels,&img->width,&img->height,&img->max_value,&img->type,&img->format);
 }
@@ -475,6 +483,20 @@ int qpbm_stride(qpbm_t* img){
         case QPBM_PGM: return img->max_value > 255 ? 2 : 1;
         case QPBM_PPM: return img->max_value > 255 ? 8 : 4;
         default:       return 0;
+    }
+}
+
+const char* qpbm_err(qpbm_err_n err){
+    switch(err){
+        case QPBM_OK:               return "no error";
+        case QPBM_ERR_NULLPTR:      return "null pointer passed to function";
+        case QPBM_ERR_INVALID_TYPE: return "qpbm_type passed is not a valid type";
+        case QPBM_ERR_NOT_PBM:      return "file is not a netpbm file";
+        case QPBM_ERR_WRONG_TYPE:   return "netpbm file is not of the desired type";
+        case QPBM_ERR_MEM:          return "failed to allocate memory";
+        case QPBM_ERR_PARSE_ERROR:  return "failed at parsing file";
+        case QPBM_ERR_UNKNOWN:      return "unknown error";
+        default:                    return "unspecified error";
     }
 }
 

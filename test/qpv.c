@@ -12,14 +12,19 @@
 int main(int argc, char* argv[]){
     if (argc < 2) fprintf(stderr,"USAGE: %s file",argv[0]);
     char* in = argv[1];
-    FILE* fin = fopen(in,"r");
+    FILE* fin = fopen(in,"rb");
     if(!fin){
         perror("ERROR: failed to open file ");
         return 127;
     }
 
     qpbm_t img;
-    qpbm_load(fin,&img,QPBM_PNM);
+    int err = qpbm_load(fin,&img,QPBM_PNM);
+    if(err != QPBM_OK){
+        fprintf(stderr,"Failed to load %s, %s", in, qpbm_err(err));
+        return -1;
+    }
+    fprintf(stdout,"PBMV: %dx%d, P%d\n",img.width, img.height,img.type+img.format);
     
     uint8_t scalx = 1, scaly = 1;
     if (img.width < 100)  scalx = 10;
@@ -27,6 +32,7 @@ int main(int argc, char* argv[]){
 
     int wind_w = img.width*scalx;
     int wind_h = img.height*scaly;
+
 
     InitWindow(wind_w,wind_h,"ppmv");
     const char* infotext = TextFormat("%s: P%c (%d x %d) (%d)",in,img.type,img.width,img.height,img.max_value);
